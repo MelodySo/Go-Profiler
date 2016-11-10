@@ -201,7 +201,7 @@ namespace GoProfiler
             }
             else
             {
-                EditorGUILayout.LabelField("Can't instance texture,maybe it was already released.");
+                EditorGUILayout.LabelField("Can't instance object,maybe it was already released.");
             }
             //MemoryFilters end...
 
