@@ -11,6 +11,6 @@ public class RegexElement
 [Serializable]
 public class MemoryFilter
 {
-	public ClassIDMap iD;
+	public ClassIDMap classID;
     public List<RegexElement> regexElementList = new List<RegexElement>();
 }

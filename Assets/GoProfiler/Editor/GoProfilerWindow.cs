@@ -155,7 +155,7 @@ namespace GoProfiler
                 }
             }
             GUILayout.FlexibleSpace();
-            showObjectInspector = EditorGUILayout.Toggle("Show In Inspector", showObjectInspector);
+            //showObjectInspector = EditorGUILayout.Toggle("Show In Inspector", showObjectInspector); //TODO
             EditorGUILayout.EndHorizontal();
             //Top tool bar end...
 
@@ -387,7 +387,7 @@ namespace GoProfiler
             int index = -1;
             if (memoryFilters) {
                 for (int i = 0; i < memoryFilters.memoryFilterList.Count; i++) {
-					if ((int)memoryFilters.memoryFilterList[i].iD == classID)
+					if ((int)memoryFilters.memoryFilterList[i].classID == classID)
                     {
                         index = i;
                     }
