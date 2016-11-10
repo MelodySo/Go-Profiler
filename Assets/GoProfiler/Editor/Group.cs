@@ -11,7 +11,7 @@ namespace GoProfiler
 		public Group(int classId,string typeName) {
 			this.classId = classId;
 			packedNativeObjectList = new List<PackedNativeUnityEngineObject> ();
-			itemNode = TreeViewNode.BuildNode<PackedItemNode> (typeName);
+			itemNode = new PackedItemNode(typeName);
 		}
         public int classId;
         public PackedItemNode itemNode;

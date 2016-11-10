@@ -49,20 +49,22 @@ namespace GoProfiler
 		public PackedMemorySnapshot mSnapshot;
     }
     public class GoProfilerWindow : EditorWindow
-	{
+    {
         [SerializeField]
-        TreeViewNode memoryRootNode;
+        PackedItemNode memoryRootNode;
         [SerializeField]
         PackedMemoryData data;
         [SerializeField]
         MemoryFilterSettings memoryFilters;
         protected Vector2 scrollPosition = Vector2.zero;
         int _prevInstance;
-        Texture2D _textureObject;
         GUIStyle toolBarStyle;
 		bool showObjectInspector = false;
-        public static object selectedObject;
-        [MenuItem("Window/GoProfiler")]
+        [NonSerialized]
+        public static PackedItemNode selectedObject;
+        [NonSerialized]
+        UnityEngine.Object objectField;
+        [MenuItem("Window/Go-Profiler")]
         static void ShowWindow()
         {
             GoProfilerWindow window = (GetWindow(typeof(GoProfilerWindow)) as GoProfilerWindow);
@@ -74,7 +76,7 @@ namespace GoProfiler
             if (memoryRootNode==null)
             {
                 Debug.Log("Go-Profiler Init");
-                memoryRootNode = TreeViewNode.BuildNode<TreeViewNode>("Root");
+                memoryRootNode = new PackedItemNode("Root");
             }
 			if (data == null)
 				data = new PackedMemoryData();
@@ -99,10 +101,16 @@ namespace GoProfiler
             MemorySnapshot.OnSnapshotReceived -= IncomingSnapshot;
             selectedObject = null;
         }
+        public void ClearEditorReferences() {
+            //DestroyImmediate(memoryRootNode); 
+            //memoryRootNode = null;
+            EditorUtility.UnloadUnusedAssetsImmediate();
+            System.GC.Collect();
+            Resources.UnloadUnusedAssets();
+        }
         void OnGUI()
         {
-			//if put these code to OnEnable function,the EditorStyles.boldLabel is null , and everything is wrong.
-
+            //if put these code to OnEnable function,the EditorStyles.boldLabel is null , and everything is wrong.
             //Debug.Log("ONGUI"); 
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             if (GUILayout.Button("Take Sample: " + ProfilerDriver.GetConnectionIdentifier(ProfilerDriver.connectedProfiler), EditorStyles.toolbarButton))
@@ -113,9 +121,7 @@ namespace GoProfiler
             }
             if (GUILayout.Button(new GUIContent("Clear Editor References", "Design for profile in editor.\nEditorUtility.UnloadUnusedAssetsImmediate() can be called."), EditorStyles.toolbarButton))
             {
-                EditorUtility.UnloadUnusedAssetsImmediate();
-                System.GC.Collect();
-                Resources.UnloadUnusedAssets();
+                ClearEditorReferences();
             }
             if (GUILayout.Button("Save Snapshot", EditorStyles.toolbarButton))
             {
@@ -127,7 +133,7 @@ namespace GoProfiler
                         System.Runtime.Serialization.Formatters.Binary.BinaryFormatter bf = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
                         using (Stream stream = File.Open(fileName, FileMode.Create))
                         {
-							bf.Serialize(stream, data.mSnapshot);
+                            bf.Serialize(stream, data.mSnapshot);
                         }
                     }
                 }
@@ -147,76 +153,74 @@ namespace GoProfiler
                         IncomingSnapshot(bf.Deserialize(stream) as PackedMemorySnapshot);
                     }
                 }
-			}
-			GUILayout.FlexibleSpace();
-			showObjectInspector = EditorGUILayout.Toggle ("Show In Inspector", showObjectInspector);
+            }
+            GUILayout.FlexibleSpace();
+            showObjectInspector = EditorGUILayout.Toggle("Show In Inspector", showObjectInspector);
             EditorGUILayout.EndHorizontal();
             //Top tool bar end...
 
 
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             memoryFilters = EditorGUILayout.ObjectField(memoryFilters, typeof(MemoryFilterSettings), false) as MemoryFilterSettings;
-            if (GUILayout.Button("Save as plist/xml", EditorStyles.toolbarButton))
+            if (GUILayout.Button(new GUIContent("Save as plist/xml", "TODO in the future..."), EditorStyles.toolbarButton))
             {
             }
-            if (GUILayout.Button("Load plist/xml", EditorStyles.toolbarButton))
+            if (GUILayout.Button(new GUIContent("Load plist/xml", "TODO in the future..."), EditorStyles.toolbarButton))
             {
-			}
-			GUILayout.FlexibleSpace();
-			if (GUILayout.Button(EditorGUIUtility.IconContent("TreeEditor.Refresh"), EditorStyles.toolbarButton, GUILayout.Width(30)))
-			{
-				IncomingSnapshot (data.mSnapshot);
-				Repaint();
-			}
+            }
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button(EditorGUIUtility.IconContent("TreeEditor.Refresh"), EditorStyles.toolbarButton, GUILayout.Width(30)))
+            {
+                IncomingSnapshot(data.mSnapshot);
+                Repaint();
+            }
             EditorGUILayout.EndHorizontal();
-            if (!memoryFilters) {
+            if (!memoryFilters)
+            {
                 EditorGUILayout.HelpBox("Please Select a MemoryFilters object or load it from the .plist/.xml file", MessageType.Warning);
+            }
+
+            //TODO: handle the selected object.
+            //EditorGUILayout.HelpBox("Watching Texture Detail Data is only for Editor.", MessageType.Warning, true);
+            if (selectedObject != null && selectedObject.childList.Count == 0)
+            {
+                if (selectedObject != null && _prevInstance != selectedObject.instanceID)
+                {
+                    objectField = EditorUtility.InstanceIDToObject(selectedObject.instanceID);
+                    _prevInstance = selectedObject.instanceID;
+                    Selection.instanceIDs = new int[] { selectedObject.instanceID };
+                }
+            }
+            if (objectField != null)
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Selected Object Info:");
+                EditorGUILayout.ObjectField(objectField, objectField.GetType(), true);
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.EndHorizontal();
+            }
+            else
+            {
+                EditorGUILayout.LabelField("Can't instance texture,maybe it was already released.");
             }
             //MemoryFilters end...
 
-
-			Rect titleRect = EditorGUILayout.GetControlRect();
-			EditorGUI.DrawRect(titleRect, new Color(0.15f, 0.15f, 0.15f, 1));
-			EditorGUI.DrawRect(new Rect(titleRect.x + titleRect.width - 200, titleRect.y, 1, Screen.height), new Color(0.15f, 0.15f, 0.15f, 1));
-			EditorGUI.DrawRect(new Rect(titleRect.x + titleRect.width - 100, titleRect.y, 1, Screen.height), new Color(0.15f, 0.15f, 0.15f, 1));
-			GUI.Label(new Rect(titleRect.x, titleRect.y, titleRect.width - 200, titleRect.height), "Name", toolBarStyle);
-			GUI.Label(new Rect(titleRect.x + titleRect.width - 175, titleRect.y, 50, titleRect.height), "Size", toolBarStyle);
-			GUI.Label(new Rect(titleRect.x + titleRect.width - 75, titleRect.y, 50, titleRect.height), "Count", toolBarStyle);
-			//Title bar end...
+            Rect titleRect = EditorGUILayout.GetControlRect();
+            EditorGUI.DrawRect(titleRect, new Color(0.15f, 0.15f, 0.15f, 1));
+            EditorGUI.DrawRect(new Rect(titleRect.x + titleRect.width - 200, titleRect.y, 1, Screen.height), new Color(0.15f, 0.15f, 0.15f, 1));
+            EditorGUI.DrawRect(new Rect(titleRect.x + titleRect.width - 100, titleRect.y, 1, Screen.height), new Color(0.15f, 0.15f, 0.15f, 1));
+            GUI.Label(new Rect(titleRect.x, titleRect.y, titleRect.width - 200, titleRect.height), "Name", toolBarStyle);
+            GUI.Label(new Rect(titleRect.x + titleRect.width - 175, titleRect.y, 50, titleRect.height), "Size", toolBarStyle);
+            GUI.Label(new Rect(titleRect.x + titleRect.width - 75, titleRect.y, 50, titleRect.height), "RefCount", toolBarStyle);
+            //Title bar end...
 
             scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-            memoryRootNode.OnGUI();
+            if (memoryRootNode != null && memoryRootNode.childList != null)
+                memoryRootNode.DrawGUI(0);
+            else
+                Init();
             GUILayout.EndScrollView();
             //Contents end...
-
-			//TODO:handle the selected object.
-            //UnityEngine.Object selectedObject = Selection.activeObject;
-            //if (selectedObject is PackedItemNode)
-            //{
-            //    if ((selectedObject as PackedItemNode).classID == ClassIDMap.Texture2D)
-            //    {
-            //        //EditorGUILayout.HelpBox("Watching Texture Detail Data is only for Editor.", MessageType.Warning, true);
-            //        PackedItemNode nativeObject = Selection.activeObject as PackedItemNode;
-            //        if (_prevInstance != nativeObject.instanceID)
-            //        {
-            //            _textureObject = EditorUtility.InstanceIDToObject(nativeObject.instanceID) as Texture2D;
-            //            _prevInstance = nativeObject.instanceID;
-            //            Selection.instanceIDs = new int[] { nativeObject.instanceID };
-            //        }
-            //        if (_textureObject != null)
-            //        {
-            //            EditorGUILayout.LabelField("textureInfo: " + _textureObject.width + "x" + _textureObject.height + " " + _textureObject.format);
-            //            EditorGUILayout.ObjectField(_textureObject, typeof(Texture2D),false);
-            //            _textureSize = EditorGUILayout.Slider(_textureSize, 100.0f, 1024.0f);
-            //            GUILayout.Label(_textureObject, GUILayout.Width(_textureSize), GUILayout.Height(_textureSize * _textureObject.height / _textureObject.width));
-            //        }
-            //        else
-            //        {
-            //            EditorGUILayout.LabelField("Can't instance texture,maybe it was already released.");
-            //        }
-            //    }
-            //}
-
             //handle the select event to Repaint
             if (Event.current.type == EventType.mouseDown)
             {
@@ -229,32 +233,52 @@ namespace GoProfiler
                 return;
             Debug.Log("GoProfilerWindow.IncomingSnapshot");
 			data.mSnapshot = snapshot;
-            memoryRootNode.Clear();
-            TreeViewNode assetsRoot = TreeViewNode.BuildNode<TreeViewNode>("Assets");
-            TreeViewNode sceneMemoryRoot = TreeViewNode.BuildNode<TreeViewNode>("SceneMemory");
-            PackedItemNode managerNode = TreeViewNode.BuildNode<PackedItemNode>("Managers");
+            memoryRootNode = new PackedItemNode("Root");
+            PackedItemNode assetsRoot = new PackedItemNode("Assets");
+            PackedItemNode sceneMemoryRoot = new PackedItemNode("SceneMemory");
+            PackedItemNode notSavedRoot = new PackedItemNode("NotSaved");
+            PackedItemNode builtinResourcesRoot = new PackedItemNode("BuiltinResources");
+            PackedItemNode unknownRoot = new PackedItemNode("Unknown");
+            //PackedItemNode managerNode = PackedItemNode.BuildNode<PackedItemNode>("Managers");
             memoryRootNode.AddNode(assetsRoot);
             memoryRootNode.AddNode(sceneMemoryRoot);
-            assetsRoot.AddNode(managerNode);
-
+            memoryRootNode.AddNode(notSavedRoot);
+            memoryRootNode.AddNode(builtinResourcesRoot);
+            //assetsRoot.AddNode(managerNode);
             Dictionary<int, Group> assetGroup = new Dictionary<int, Group>();
             Dictionary<int, Group> sceneMemoryGroup = new Dictionary<int, Group>();
+            Dictionary<int, Group> notSavedGroup = new Dictionary<int, Group>();
+            Dictionary<int, Group> builtinResourcesGroup = new Dictionary<int, Group>();
+            Dictionary<int, Group> unknownGroup = new Dictionary<int, Group>();
             List<PackedNativeUnityEngineObject> assetsObjectList = new List<PackedNativeUnityEngineObject>();
             List<PackedNativeUnityEngineObject> sceneMemoryObjectList = new List<PackedNativeUnityEngineObject>();
+            List<PackedNativeUnityEngineObject> notSavedObjectList = new List<PackedNativeUnityEngineObject>();
+            List<PackedNativeUnityEngineObject> builtinResourcesList = new List<PackedNativeUnityEngineObject>();
+            List<PackedNativeUnityEngineObject> unknownObjectList = new List<PackedNativeUnityEngineObject>();
             //List<PackedNativeUnityEngineObject> managerList = new List<PackedNativeUnityEngineObject>();
             for ( int i=0;i< snapshot.nativeObjects.Length;i++)
             {
                 PackedNativeUnityEngineObject obj = snapshot.nativeObjects[i];
-					if (obj.isPersistent && ((obj.hideFlags & HideFlags.DontUnloadUnusedAsset) == 0))
+                if (obj.isPersistent && ((obj.hideFlags & HideFlags.DontUnloadUnusedAsset) == 0))
                 {
-                        assetsObjectList.Add(obj);
+                    assetsObjectList.Add(obj);
                 }
                 else if (!obj.isPersistent && obj.hideFlags == HideFlags.None)
                 {
-                        sceneMemoryObjectList.Add(obj);
-					
+                    sceneMemoryObjectList.Add(obj);
                 }
+                else if (!obj.isPersistent && (obj.hideFlags & HideFlags.HideAndDontSave) != 0)
+                {
+                    notSavedObjectList.Add(obj);
+                }
+                else if (obj.isPersistent && (obj.hideFlags & HideFlags.HideAndDontSave) != 0) {
+                    builtinResourcesList.Add(obj);
+                }
+                else
+                    unknownObjectList.Add(obj);
             }
+            if (unknownObjectList.Count > 0)//I can't find any unknown object yet.
+                memoryRootNode.AddNode(unknownRoot);
             for (int i = 0; i < assetsObjectList.Count; i++)
             {
                 PackedNativeUnityEngineObject assetsObject = assetsObjectList[i];
@@ -269,7 +293,27 @@ namespace GoProfiler
 					sceneMemoryGroup.Add(sceneObject.classId, new Group(sceneObject.classId,data.mSnapshot.nativeTypes[sceneObject.classId].name));
                 sceneMemoryGroup[sceneObject.classId].packedNativeObjectList.Add(sceneObject);
             }
-
+            for (int i = 0; i < notSavedObjectList.Count; i++)
+            {
+                PackedNativeUnityEngineObject notSavedObject = notSavedObjectList[i];
+                if (!notSavedGroup.ContainsKey(notSavedObject.classId))
+                    notSavedGroup.Add(notSavedObject.classId, new Group(notSavedObject.classId, data.mSnapshot.nativeTypes[notSavedObject.classId].name));
+                notSavedGroup[notSavedObject.classId].packedNativeObjectList.Add(notSavedObject);
+            }
+            for (int i = 0; i < builtinResourcesList.Count; i++)
+            {
+                PackedNativeUnityEngineObject builtinResourcesObject = builtinResourcesList[i];
+                if (!builtinResourcesGroup.ContainsKey(builtinResourcesObject.classId))
+                    builtinResourcesGroup.Add(builtinResourcesObject.classId, new Group(builtinResourcesObject.classId, data.mSnapshot.nativeTypes[builtinResourcesObject.classId].name));
+                builtinResourcesGroup[builtinResourcesObject.classId].packedNativeObjectList.Add(builtinResourcesObject);
+            }
+            for (int i = 0; i < unknownObjectList.Count; i++)
+            {
+                PackedNativeUnityEngineObject unknownObject = unknownObjectList[i];
+                if (!unknownGroup.ContainsKey(unknownObject.classId))
+                    unknownGroup.Add(unknownObject.classId, new Group(unknownObject.classId, data.mSnapshot.nativeTypes[unknownObject.classId].name));
+                unknownGroup[unknownObject.classId].packedNativeObjectList.Add(unknownObject);
+            }
             using (var i = assetGroup.GetEnumerator())//replace foreach
             {
                 while (i.MoveNext())
@@ -294,8 +338,46 @@ namespace GoProfiler
                     }
                 }
             }
+            using (var i = notSavedGroup.GetEnumerator())//replace foreach
+            {
+                while (i.MoveNext())
+                {
+                    Group group = i.Current.Value;
+                    SetNodeByClassID(group.classId, group.itemNode, group.packedNativeObjectList);
+                    if (group.itemNode != null)
+                    {
+                        notSavedRoot.AddNode(group.itemNode);
+                    }
+                }
+            }
+            using (var i = builtinResourcesGroup.GetEnumerator())//replace foreach
+            {
+                while (i.MoveNext())
+                {
+                    Group group = i.Current.Value;
+                    SetNodeByClassID(group.classId, group.itemNode, group.packedNativeObjectList);
+                    if (group.itemNode != null)
+                    {
+                        builtinResourcesRoot.AddNode(group.itemNode);
+                    }
+                }
+            }
+            using (var i = unknownGroup.GetEnumerator())//replace foreach
+            {
+                while (i.MoveNext())
+                {
+                    Group group = i.Current.Value;
+                    SetNodeByClassID(group.classId, group.itemNode, group.packedNativeObjectList);
+                    if (group.itemNode != null)
+                    {
+                        unknownRoot.AddNode(group.itemNode);
+                    }
+                }
+            }
+            memoryRootNode.SetCount();
             memoryRootNode.Convert();
             memoryRootNode.Sort();
+            //ClearEditorReferences();//To release gc and memory.
         }
 		void SetNodeByClassID(int classID, PackedItemNode nodeRoot, List<PackedNativeUnityEngineObject> nativeUnityObjectList)
         {
@@ -315,13 +397,13 @@ namespace GoProfiler
 			if (index > -1)//这样写好蛋疼啊0.0
             {
                 Dictionary<PackedItemNode, RegexElement> tempDict = new Dictionary<PackedItemNode, RegexElement>();
-                PackedItemNode otherNode = TreeViewNode.BuildNode<PackedItemNode>("Others");
+                PackedItemNode otherNode = new PackedItemNode("Others");
 				otherNode.nativeType = data.mSnapshot.nativeTypes [classID];
                 nodeRoot.AddNode(otherNode);
                 MemoryFilter memoryFilter = memoryFilters.memoryFilterList[index];
                 for (int i = 0; i < memoryFilter.regexElementList.Count; i++)
                 {
-                    PackedItemNode filterNode = TreeViewNode.BuildNode<PackedItemNode>(memoryFilter.regexElementList[i].key);
+                    PackedItemNode filterNode = new PackedItemNode(memoryFilter.regexElementList[i].key ,true);
 					filterNode.nativeType = data.mSnapshot.nativeTypes [classID];
                     nodeRoot.AddNode(filterNode);
                     tempDict.Add(filterNode, memoryFilter.regexElementList[i]);
@@ -330,7 +412,7 @@ namespace GoProfiler
                 {
                     PackedNativeUnityEngineObject item = nativeUnityObjectList[0];
                     string name = item.name;
-                    PackedItemNode childNode = TreeViewNode.BuildNode<PackedItemNode>(name);
+                    PackedItemNode childNode = new PackedItemNode(name);
                     childNode.itemName = name;
                     childNode.size = item.size;
                     childNode.instanceID = item.instanceId;
@@ -366,7 +448,7 @@ namespace GoProfiler
                 {
                     PackedNativeUnityEngineObject item = nativeUnityObjectList[i];
                     string name = item.name;
-                    PackedItemNode node = TreeViewNode.BuildNode<PackedItemNode>(name);
+                    PackedItemNode node = new PackedItemNode(name);
                     node.itemName = name;
                     node.size = item.size;
                     node.instanceID = item.instanceId;
