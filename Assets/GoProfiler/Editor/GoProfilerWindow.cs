@@ -50,7 +50,7 @@ namespace GoProfiler
     }
     public class GoProfilerWindow : EditorWindow
     {
-        [SerializeField]
+        [NonSerialized]
         PackedItemNode memoryRootNode;
         [SerializeField]
         PackedMemoryData data;
@@ -59,7 +59,7 @@ namespace GoProfiler
         protected Vector2 scrollPosition = Vector2.zero;
         int _prevInstance;
         GUIStyle toolBarStyle;
-		bool showObjectInspector = false;
+		//bool showObjectInspector = false;
         [NonSerialized]
         public static PackedItemNode selectedObject;
         [NonSerialized]
@@ -73,11 +73,6 @@ namespace GoProfiler
         }
         void Init()
         {
-            if (memoryRootNode==null)
-            {
-                Debug.Log("Go-Profiler Init");
-                memoryRootNode = new PackedItemNode("Root");
-            }
 			if (data == null)
 				data = new PackedMemoryData();
 
@@ -89,7 +84,13 @@ namespace GoProfiler
 				toolBarStyle.alignment = TextAnchor.MiddleCenter;
 				toolBarStyle.normal.textColor = Color.white;
 				toolBarStyle.fontStyle = FontStyle.Bold;
-			}
+            }
+            if (memoryRootNode == null)
+            {
+                Debug.Log("Go-Profiler Init");
+                memoryRootNode = new PackedItemNode("Root");
+                IncomingSnapshot(data.mSnapshot);
+            }
         }
         void OnEnable()
         {
@@ -110,6 +111,7 @@ namespace GoProfiler
         }
         void OnGUI()
         {
+            Init();
             //if put these code to OnEnable function,the EditorStyles.boldLabel is null , and everything is wrong.
             //Debug.Log("ONGUI"); 
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
@@ -434,6 +436,8 @@ namespace GoProfiler
                                     break;
                                 }
                             }
+                            if (isMatch)
+                                break;
                         }
 					}
 					if (!isMatch) {

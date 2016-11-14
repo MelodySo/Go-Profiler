@@ -6,7 +6,6 @@ using System;
 using UnityEditor.MemoryProfiler;
 namespace GoProfiler
 {
-    [Serializable]
     public class PackedItemNode : IComparable<PackedItemNode>
     {
         public int instanceID;
