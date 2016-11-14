@@ -11,3 +11,5 @@ How to use:
 Simplified-Chinese only. 目前仅支持中文说明，不过我觉得看截图应该也看得懂。
 # http://gad.qq.com/article/detail/7173953
 
+Contact Me:
+QQ: 529419853
