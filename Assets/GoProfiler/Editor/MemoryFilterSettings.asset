@@ -14,18 +14,39 @@ MonoBehaviour:
   memoryFilterList:
   - classID: 28
     regexElementList:
-    - key: Cloth
+    - key: "\u6302\u4EF6"
       regexList:
-      - ^\d{10}.*
+      - ^((\d{3}9)|(\d{2}1[0-9]))\d{6}.*
     - key: UI
       regexList:
       - ^Atlas.*
       - ^UIAtlas.*
-  - classID: 74
-    regexElementList:
-    - key: npc
+      - ^InGame_.*
+      - ^loading_.*
+      - ^UIAtlas.*
+      - ^Series.*
+      - ^ScoreNum.*
+      - ^UIComponent.*
+      - ^InGame_.*
+      - ^ingame_.*
+      - ^GameResult.*
+      - ^ComboN.*
+    - key: "\u573A\u666F"
       regexList:
-      - ^SD_.*
-    - key: eff
+      - ^led_.*
+      - ^dimian_.*
+    - key: "\u7279\u6548"
       regexList:
-      - ^eff.*
+      - ^eff_.*
+      - ^eff_ui_.*
+      - ^tex_.*
+      - ^ui.*
+    - key: "\u5B57\u4F53\u8D34\u56FE"
+      regexList:
+      - ^Font Texture.*
+    - key: "\u7D20\u4F53"
+      regexList:
+      - ^\d{3}7\d{6}.*
+    - key: "\u670D\u88C5"
+      regexList:
+      - ^\d{10}.*

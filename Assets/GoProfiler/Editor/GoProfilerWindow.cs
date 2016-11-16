@@ -59,11 +59,16 @@ namespace GoProfiler
         protected Vector2 scrollPosition = Vector2.zero;
         int _prevInstance;
         GUIStyle toolBarStyle;
-		//bool showObjectInspector = false;
+        //bool showObjectInspector = false;
+        [SerializeField]
+        bool canSaveDetails = false;
+        [SerializeField]
+        int savedMinSize = 0;
         [NonSerialized]
         public static PackedItemNode selectedObject;
         [NonSerialized]
         UnityEngine.Object objectField;
+        DateTime lastRefreshTime;
         [MenuItem("Window/Go-Profiler")]
         static void ShowWindow()
         {
@@ -103,8 +108,6 @@ namespace GoProfiler
             selectedObject = null;
         }
         public void ClearEditorReferences() {
-            //DestroyImmediate(memoryRootNode); 
-            //memoryRootNode = null;
             EditorUtility.UnloadUnusedAssetsImmediate();
             System.GC.Collect();
             Resources.UnloadUnusedAssets();
@@ -112,8 +115,6 @@ namespace GoProfiler
         void OnGUI()
         {
             Init();
-            //if put these code to OnEnable function,the EditorStyles.boldLabel is null , and everything is wrong.
-            //Debug.Log("ONGUI"); 
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             if (GUILayout.Button("Take Sample: " + ProfilerDriver.GetConnectionIdentifier(ProfilerDriver.connectedProfiler), EditorStyles.toolbarButton))
             {
@@ -129,11 +130,11 @@ namespace GoProfiler
             {
                 if (data.mSnapshot != null)
                 {
-                    string fileName = EditorUtility.SaveFilePanel("Save Snapshot", null, "MemorySnapshot", "memsnap");
-                    if (!string.IsNullOrEmpty(fileName))
+                    string filePath = EditorUtility.SaveFilePanel("Save Snapshot", null, "MemorySnapshot" + System.DateTime.Now.ToString("_MMdd_HHmm"), "memsnap");
+                    if (!string.IsNullOrEmpty(filePath))
                     {
                         System.Runtime.Serialization.Formatters.Binary.BinaryFormatter bf = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                        using (Stream stream = File.Open(fileName, FileMode.Create))
+                        using (Stream stream = File.Open(filePath, FileMode.Create))
                         {
                             bf.Serialize(stream, data.mSnapshot);
                         }
@@ -141,36 +142,65 @@ namespace GoProfiler
                 }
                 else
                 {
-                    UnityEngine.Debug.LogWarning("No snapshot to save.  Try taking a snapshot first.");
+                    Debug.LogWarning("No snapshot to save.  Try taking a snapshot first.");
                 }
             }
             if (GUILayout.Button("Load Snapshot", EditorStyles.toolbarButton))
             {
-                string fileName = EditorUtility.OpenFilePanel("Load Snapshot", null, "memsnap");
-                if (!string.IsNullOrEmpty(fileName))
+                string filePath = EditorUtility.OpenFilePanel("Load Snapshot", null, "memsnap");
+                if (!string.IsNullOrEmpty(filePath))
                 {
                     System.Runtime.Serialization.Formatters.Binary.BinaryFormatter bf = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                    using (Stream stream = File.Open(fileName, FileMode.Open))
+                    using (Stream stream = File.Open(filePath, FileMode.Open))
                     {
                         IncomingSnapshot(bf.Deserialize(stream) as PackedMemorySnapshot);
                     }
                 }
             }
+            //GUILayout.Space(5);
             GUILayout.FlexibleSpace();
-            //showObjectInspector = EditorGUILayout.Toggle("Show In Inspector", showObjectInspector); //TODO
+            if (GUILayout.Button("Save Snapshot as .txt", EditorStyles.toolbarButton))
+            {
+                if (memoryRootNode != null)
+                {
+                    string filePath = EditorUtility.SaveFilePanel("Save Snapshot as .txt", null, "Mindmap" + System.DateTime.Now.ToString("_MMdd_HHmm"), "txt");
+                    if (!string.IsNullOrEmpty(filePath))
+                    {
+                        SaveToMindMap(filePath);
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("No snapshot to save.  Try taking a snapshot first.");
+                }
+            }
+            if (GUILayout.Button("Load Snapshot from .txt", EditorStyles.toolbarButton))
+            {
+                string filePath = EditorUtility.OpenFilePanel("Load Snapshot from .txt", null, "txt");
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    LoadFromMindMap(filePath);
+                }
+            }
+            canSaveDetails = GUILayout.Toggle(canSaveDetails, "saveDetails");
+            savedMinSize = EditorGUILayout.IntField("minSize", savedMinSize, EditorStyles.toolbarTextField);
+            if (savedMinSize < 0)
+                savedMinSize = 0;
             EditorGUILayout.EndHorizontal();
             //Top tool bar end...
 
 
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             memoryFilters = EditorGUILayout.ObjectField(memoryFilters, typeof(MemoryFilterSettings), false) as MemoryFilterSettings;
-            if (GUILayout.Button(new GUIContent("Save as plist/xml", "TODO in the future..."), EditorStyles.toolbarButton))
-            {
-            }
-            if (GUILayout.Button(new GUIContent("Load plist/xml", "TODO in the future..."), EditorStyles.toolbarButton))
-            {
-            }
+            //if (GUILayout.Button(new GUIContent("Save as plist/xml", "TODO in the future..."), EditorStyles.toolbarButton))
+            //{
+            //}
+            //if (GUILayout.Button(new GUIContent("Load plist/xml", "TODO in the future..."), EditorStyles.toolbarButton))
+            //{
+            //}
             GUILayout.FlexibleSpace();
+            GUILayout.Label(new GUIContent("[LastRefreshTime]" + lastRefreshTime.ToShortTimeString(), 
+                " enter / exit play mode or change a script,Unity has to reload the mono assemblies , and the GoProfilerWindow has to Refresh immediately"));
             if (GUILayout.Button(EditorGUIUtility.IconContent("TreeEditor.Refresh"), EditorStyles.toolbarButton, GUILayout.Width(30)))
             {
                 IncomingSnapshot(data.mSnapshot);
@@ -190,7 +220,7 @@ namespace GoProfiler
                 {
                     objectField = EditorUtility.InstanceIDToObject(selectedObject.instanceID);
                     _prevInstance = selectedObject.instanceID;
-                    Selection.instanceIDs = new int[] { selectedObject.instanceID };
+                    //Selection.instanceIDs = new int[] { selectedObject.instanceID }; //Hide in inspector.
                 }
             }
             if (objectField != null)
@@ -233,6 +263,7 @@ namespace GoProfiler
         {
             if (null==snapshot)
                 return;
+            lastRefreshTime = DateTime.Now;
             Debug.Log("GoProfilerWindow.IncomingSnapshot");
 			data.mSnapshot = snapshot;
             memoryRootNode = new PackedItemNode("Root");
@@ -251,7 +282,7 @@ namespace GoProfiler
             Dictionary<int, Group> sceneMemoryGroup = new Dictionary<int, Group>();
             Dictionary<int, Group> notSavedGroup = new Dictionary<int, Group>();
             Dictionary<int, Group> builtinResourcesGroup = new Dictionary<int, Group>();
-            Dictionary<int, Group> unknownGroup = new Dictionary<int, Group>();
+            Dictionary<int, Group> unknownGroup = new Dictionary<int, Group>();//I can't find any unknown object yet.
             List<PackedNativeUnityEngineObject> assetsObjectList = new List<PackedNativeUnityEngineObject>();
             List<PackedNativeUnityEngineObject> sceneMemoryObjectList = new List<PackedNativeUnityEngineObject>();
             List<PackedNativeUnityEngineObject> notSavedObjectList = new List<PackedNativeUnityEngineObject>();
@@ -415,7 +446,6 @@ namespace GoProfiler
                     PackedNativeUnityEngineObject item = nativeUnityObjectList[0];
                     string name = item.name;
                     PackedItemNode childNode = new PackedItemNode(name);
-                    childNode.itemName = name;
                     childNode.size = item.size;
                     childNode.instanceID = item.instanceId;
 					childNode.nativeType = data.mSnapshot.nativeTypes [classID];
@@ -453,7 +483,6 @@ namespace GoProfiler
                     PackedNativeUnityEngineObject item = nativeUnityObjectList[i];
                     string name = item.name;
                     PackedItemNode node = new PackedItemNode(name);
-                    node.itemName = name;
                     node.size = item.size;
                     node.instanceID = item.instanceId;
 					node.nativeType = data.mSnapshot.nativeTypes [classID];
@@ -493,6 +522,71 @@ namespace GoProfiler
                     return true;
             }
             return false;
+        }
+        //MindMap support.
+        //Open the site:    naotu.baidu.com    ,and import from the txt.
+        void SaveToMindMap(string filePath) {
+            File.WriteAllText(filePath, memoryRootNode.ToMindMap(0, canSaveDetails, savedMinSize), System.Text.Encoding.UTF8);
+        }
+        void LoadFromMindMap(string fileName)
+        {
+            //data = null;  //reset data
+            using (FileStream stream = new FileStream(fileName, FileMode.Open))
+            {
+                using (StreamReader reader = new StreamReader(stream, System.Text.Encoding.UTF8))
+                {
+                    Stack<PackedItemNode> stack = new Stack<PackedItemNode>();
+                    int lastTabCount = 0;
+                    while (reader.Peek() >= 0)
+                    {
+                        int tabCount = 0;
+                        int spaceIndex = 0;
+                        string line = reader.ReadLine();
+                        char[] charArray = line.ToCharArray();
+                        for (int i = 0; i < charArray.Length; i++)
+                        {
+                            if (charArray[i] == '\t')
+                            {
+                                tabCount++;
+                                continue;
+                            }
+                            else if (charArray[i] == ' ')
+                            {
+                                spaceIndex = i;
+                            }
+                        }
+                        string itemName = line.Substring(tabCount, spaceIndex - tabCount);
+                        string sizeStr = line.Substring(spaceIndex + 1);
+                        PackedItemNode node = new PackedItemNode(itemName);
+                        node.sizeStr = sizeStr;
+                        if (tabCount == 0 && lastTabCount == 0)
+                        {
+                            memoryRootNode = node;
+                        }
+                        else if (tabCount < lastTabCount)
+                        {
+                            while(lastTabCount-->tabCount)
+                                stack.Pop();
+                            stack.Pop();
+                            stack.Peek().AddNode(node);
+                        }
+                        else if (tabCount > lastTabCount)
+                        {
+                            stack.Peek().AddNode(node);
+                        }
+                        else
+                        {
+                            stack.Pop();
+                            stack.Peek().AddNode(node);
+                        }
+                        stack.Push(node);
+                        lastTabCount = tabCount;
+                    }
+                    memoryRootNode.SetCount();
+                    //memoryRootNode.Convert();
+                    //memoryRootNode.Sort();
+                }
+            }
         }
     }
 }

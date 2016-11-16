@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System.Text;
 using System.Collections.Generic;
 using UnityEditor;
 using System;
@@ -88,7 +88,8 @@ namespace GoProfiler
             Type iconClassType = Type.GetType("UnityEngine." + iconClassString + ",UnityEngine", false, false);
             if (iconClassType == null)
                 iconClassType = Type.GetType("UnityEditor." + iconClassString + ",UnityEditor", false, false);
-            icon = AssetPreview.GetMiniTypeThumbnail(iconClassType == null ? typeof(GameObject) : iconClassType);
+            icon = AssetPreview.GetMiniTypeThumbnail(iconClassType);
+            //icon = AssetPreview.GetMiniTypeThumbnail(iconClassType == null ? typeof(GameObject) : iconClassType);
             if (icon)
                 icon.hideFlags = HideFlags.HideAndDontSave;
             guiContent = new GUIContent(childList.Count > 0 ? string.Format("{0}({1})", itemName, totalNumber) : itemName, icon);
@@ -165,6 +166,48 @@ namespace GoProfiler
             else //if (size >= 1)
                 sizeString = size + "B";
             return sizeString;
+        }
+        /// <summary>
+        /// Save tree to mindmap.
+        /// </summary>
+        /// <param name="mindMapLevel">The tree level.</param>
+        /// <param name="showDetail">whether to show the details of each single item.</param>
+        /// <param name="minSize">minimum bytes</param>
+        /// <returns></returns>
+        public string ToMindMap(int mindMapLevel, bool showDetail, int minSize)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (childList.Count > 0)
+            {
+                sb.Append(ToMindMapLine(mindMapLevel));
+                for (int i = 0; i < childList.Count; i++)
+                {
+                    if (childList[i].size > minSize)
+                        sb.Append(childList[i].ToMindMap(mindMapLevel + 1, showDetail, minSize));
+                }
+                return sb.ToString();
+            }
+            else if (showDetail)
+            {
+                sb.Append(ToMindMapLine(mindMapLevel));
+                return sb.ToString();
+            }
+            else
+                return string.Empty;
+        }
+        private StringBuilder ToMindMapLine(int mindMapLevel)
+        {
+            StringBuilder sb = new StringBuilder();
+            int n = 0;
+            while (mindMapLevel > n++)
+            {
+                sb.Append('\t');
+            }
+            sb.Append(itemName);
+            sb.Append(' ');
+            sb.Append(sizeStr);
+            sb.Append('\n');
+            return sb;//.ToString();
         }
     }
 }
