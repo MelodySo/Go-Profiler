@@ -58,6 +58,7 @@ namespace GoProfiler
         MemoryFilterSettings memoryFilters;
         protected Vector2 scrollPosition = Vector2.zero;
         int _prevInstance;
+        int selectedIndex;
         GUIStyle toolBarStyle;
         //bool showObjectInspector = false;
         [SerializeField]
@@ -112,20 +113,63 @@ namespace GoProfiler
             System.GC.Collect();
             Resources.UnloadUnusedAssets();
         }
+        private void OnSelectProfilerClick(object userData, string[] options, int selected)
+        {
+            selectedIndex = selected;
+            int num = this.connectionGuids[selected];
+            this.lastOpenedProfiler = ProfilerDriver.GetConnectionIdentifier(num);
+            ProfilerDriver.connectedProfiler = num;
+        }
+        int[] connectionGuids;
+        string lastOpenedProfiler;
         void OnGUI()
         {
             Init();
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            //string[] array3 = new string[] { "Editor", "Fucker", "Sucker" };
+
+            if (GUILayout.Button(new GUIContent("Active Profler"), EditorStyles.toolbarDropDown))
+            {
+                Rect titleRect2 = EditorGUILayout.GetControlRect();
+                titleRect2.y += EditorStyles.toolbarDropDown.fixedHeight;
+                connectionGuids = ProfilerDriver.GetAvailableProfilers();
+                GUIContent[] guiContents = new GUIContent[connectionGuids.Length];
+                for (int i = 0; i < connectionGuids.Length; i++)
+                {
+                    if (connectionGuids[i] == ProfilerDriver.connectedProfiler) {
+                        selectedIndex = i;
+                    }
+                    bool flag = ProfilerDriver.IsIdentifierConnectable(connectionGuids[i]);
+                    string text = ProfilerDriver.GetConnectionIdentifier(connectionGuids[i]);
+                    if (!flag)
+                    {
+                        text += " (Version mismatch)";//I don't know what this means...
+                    }
+                    guiContents[i] = new GUIContent(text);
+                }
+                EditorUtility.DisplayCustomMenu(titleRect2, guiContents, selectedIndex, OnSelectProfilerClick, null);
+            }
+            //EditorGUILayout.Popup(selectedIndex, array3, EditorStyles.toolbarPopup);
+
             if (GUILayout.Button("Take Sample: " + ProfilerDriver.GetConnectionIdentifier(ProfilerDriver.connectedProfiler), EditorStyles.toolbarButton))
             {
-                ProfilerDriver.ClearAllFrames();
-                ProfilerDriver.deepProfiling = true;
+                //ProfilerDriver.ClearAllFrames();
+                //ProfilerDriver.deepProfiling = true;
+                ShowNotification(new GUIContent("Waiting for device..."));
                 MemorySnapshot.RequestNewSnapshot();
             }
             if (GUILayout.Button(new GUIContent("Clear Editor References", "Design for profile in editor.\nEditorUtility.UnloadUnusedAssetsImmediate() can be called."), EditorStyles.toolbarButton))
             {
                 ClearEditorReferences();
             }
+            GUILayout.FlexibleSpace();
+            //GUILayout.Space(5);
+            EditorGUILayout.EndHorizontal();
+
+
+
+
+            EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Save Snapshot", EditorStyles.toolbarButton))
             {
                 if (data.mSnapshot != null)
@@ -157,7 +201,6 @@ namespace GoProfiler
                     }
                 }
             }
-            //GUILayout.Space(5);
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Save Snapshot as .txt", EditorStyles.toolbarButton))
             {
@@ -411,6 +454,7 @@ namespace GoProfiler
             memoryRootNode.Convert();
             memoryRootNode.Sort();
             //ClearEditorReferences();//To release gc and memory.
+            RemoveNotification();
         }
 		void SetNodeByClassID(int classID, PackedItemNode nodeRoot, List<PackedNativeUnityEngineObject> nativeUnityObjectList)
         {
