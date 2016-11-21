@@ -6,10 +6,8 @@ Unity Version:
 
 
 How to use:
-
-
-Simplified-Chinese only. 目前仅支持中文说明，不过我觉得看截图应该也看得懂。
-# http://gad.qq.com/article/detail/7173953
+# https://github.com/MelodySo/Go-Profiler/wiki
 
 Contact Me:
 QQ: 529419853
+Email:529419853@qq.com
