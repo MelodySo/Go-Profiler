@@ -358,37 +358,37 @@ namespace GoProfiler
             for (int i = 0; i < assetsObjectList.Count; i++)
             {
                 PackedNativeUnityEngineObject assetsObject = assetsObjectList[i];
-                if (!assetGroup.ContainsKey(assetsObject.classId)) 
-					assetGroup.Add(assetsObject.classId, new Group(assetsObject.classId,data.mSnapshot.nativeTypes[assetsObject.classId].name));                
-                assetGroup[assetsObject.classId].packedNativeObjectList.Add(assetsObject);
+                if (!assetGroup.ContainsKey(assetsObject.nativeTypeArrayIndex)) 
+					assetGroup.Add(assetsObject.nativeTypeArrayIndex, new Group(assetsObject.nativeTypeArrayIndex,data.mSnapshot.nativeTypes[assetsObject.nativeTypeArrayIndex].name));                
+                assetGroup[assetsObject.nativeTypeArrayIndex].packedNativeObjectList.Add(assetsObject);
             }
             for (int i = 0; i < sceneMemoryObjectList.Count; i++)
             {
                 PackedNativeUnityEngineObject sceneObject = sceneMemoryObjectList[i];
-                if (!sceneMemoryGroup.ContainsKey(sceneObject.classId))
-					sceneMemoryGroup.Add(sceneObject.classId, new Group(sceneObject.classId,data.mSnapshot.nativeTypes[sceneObject.classId].name));
-                sceneMemoryGroup[sceneObject.classId].packedNativeObjectList.Add(sceneObject);
+                if (!sceneMemoryGroup.ContainsKey(sceneObject.nativeTypeArrayIndex))
+					sceneMemoryGroup.Add(sceneObject.nativeTypeArrayIndex, new Group(sceneObject.nativeTypeArrayIndex,data.mSnapshot.nativeTypes[sceneObject.nativeTypeArrayIndex].name));
+                sceneMemoryGroup[sceneObject.nativeTypeArrayIndex].packedNativeObjectList.Add(sceneObject);
             }
             for (int i = 0; i < notSavedObjectList.Count; i++)
             {
                 PackedNativeUnityEngineObject notSavedObject = notSavedObjectList[i];
-                if (!notSavedGroup.ContainsKey(notSavedObject.classId))
-                    notSavedGroup.Add(notSavedObject.classId, new Group(notSavedObject.classId, data.mSnapshot.nativeTypes[notSavedObject.classId].name));
-                notSavedGroup[notSavedObject.classId].packedNativeObjectList.Add(notSavedObject);
+                if (!notSavedGroup.ContainsKey(notSavedObject.nativeTypeArrayIndex))
+                    notSavedGroup.Add(notSavedObject.nativeTypeArrayIndex, new Group(notSavedObject.nativeTypeArrayIndex, data.mSnapshot.nativeTypes[notSavedObject.nativeTypeArrayIndex].name));
+                notSavedGroup[notSavedObject.nativeTypeArrayIndex].packedNativeObjectList.Add(notSavedObject);
             }
             for (int i = 0; i < builtinResourcesList.Count; i++)
             {
                 PackedNativeUnityEngineObject builtinResourcesObject = builtinResourcesList[i];
-                if (!builtinResourcesGroup.ContainsKey(builtinResourcesObject.classId))
-                    builtinResourcesGroup.Add(builtinResourcesObject.classId, new Group(builtinResourcesObject.classId, data.mSnapshot.nativeTypes[builtinResourcesObject.classId].name));
-                builtinResourcesGroup[builtinResourcesObject.classId].packedNativeObjectList.Add(builtinResourcesObject);
+                if (!builtinResourcesGroup.ContainsKey(builtinResourcesObject.nativeTypeArrayIndex))
+                    builtinResourcesGroup.Add(builtinResourcesObject.nativeTypeArrayIndex, new Group(builtinResourcesObject.nativeTypeArrayIndex, data.mSnapshot.nativeTypes[builtinResourcesObject.nativeTypeArrayIndex].name));
+                builtinResourcesGroup[builtinResourcesObject.nativeTypeArrayIndex].packedNativeObjectList.Add(builtinResourcesObject);
             }
             for (int i = 0; i < unknownObjectList.Count; i++)
             {
                 PackedNativeUnityEngineObject unknownObject = unknownObjectList[i];
-                if (!unknownGroup.ContainsKey(unknownObject.classId))
-                    unknownGroup.Add(unknownObject.classId, new Group(unknownObject.classId, data.mSnapshot.nativeTypes[unknownObject.classId].name));
-                unknownGroup[unknownObject.classId].packedNativeObjectList.Add(unknownObject);
+                if (!unknownGroup.ContainsKey(unknownObject.nativeTypeArrayIndex))
+                    unknownGroup.Add(unknownObject.nativeTypeArrayIndex, new Group(unknownObject.nativeTypeArrayIndex, data.mSnapshot.nativeTypes[unknownObject.nativeTypeArrayIndex].name));
+                unknownGroup[unknownObject.nativeTypeArrayIndex].packedNativeObjectList.Add(unknownObject);
             }
             using (var i = assetGroup.GetEnumerator())//replace foreach
             {
